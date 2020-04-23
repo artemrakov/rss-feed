@@ -12,28 +12,28 @@ const differenceBy = (initialArray, newArray, key) => {
   return initialArray.filter((item) => itemNotExist(item, newArray));
 };
 
-const getUrl = (url) => {
+const getUrl = (path) => {
   const corsUrl = 'https://cors-anywhere.herokuapp.com/';
-  return corsUrl + url;
+  return corsUrl + path;
 };
 
-const updateRssItems = (state) => {
-  const promises = state.rssUrls.map(url => axios.get(getUrl(url)));
-  Promise.all(promises)
-    .then((responses) => {
-      const newRssItems = responses.map((response) => parse(response.data)).flat();
+const updateRssFeed = (state, path) => {
+  axios.get(getUrl(path))
+    .then((response) => {
+      const newRssItems = parse(response.data);
       const rssItemsToAdd = differenceBy(newRssItems, state.rssItems, 'link');
 
+      // eslint-disable-next-line no-param-reassign
       state.rssItems = [...rssItemsToAdd, ...state.rssItems];
 
-      setTimeout(() => updateRssItems(state), 5000);
+      setTimeout(() => updateRssFeed(state, path), 5000);
     });
-}
+};
 
 const app = () => {
   const state = {
     rssItems: [],
-    rssUrls: [],
+    rssPaths: [],
     form: {
       rss: '',
       process: 'filling',
@@ -48,11 +48,10 @@ const app = () => {
     debug: true,
     resources,
   }).then(() => {
-
     watch(state);
 
-    const formSchema = ({ urls }) => yup.object().shape({
-      rss: yup.string().required().url().notOneOf(urls),
+    const formSchema = ({ paths }) => yup.object().shape({
+      rss: yup.string().required().url().notOneOf(paths),
     });
 
     const rssInput = document.getElementById('rssInput');
@@ -67,7 +66,7 @@ const app = () => {
     const form = document.querySelector('.rss-form');
     form.addEventListener('submit', (event) => {
       event.preventDefault();
-      formSchema({ urls: state.rssUrls }).validate(state.form)
+      formSchema({ paths: state.rssPaths }).validate(state.form)
         .then(() => {
           state.error = null;
           state.form.process = 'sending';
@@ -75,10 +74,12 @@ const app = () => {
           axios.get(getUrl(state.form.rss))
             .then((response) => {
               const items = parse(response.data);
-              state.rssItems = [...state.rssItems, ...items];
-              state.rssUrls = [...state.rssUrls, state.form.rss];
-              state.form.rss = '';
+              state.rssItems = [...items, ...state.rssItems];
+              state.rssPaths = [...state.rssPaths, state.form.rss];
               state.form.process = 'finished';
+
+              updateRssFeed(state, state.form.rss);
+              state.form.rss = '';
             })
             .catch((error) => {
               state.form.processError = error.message;
@@ -89,9 +90,7 @@ const app = () => {
           state.error = err.message;
         });
     });
-
-    updateRssItems(state);
-  })
-}
+  });
+};
 
 app();
