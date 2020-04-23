@@ -6,12 +6,29 @@ import watch from './watchers';
 import resources from './locales';
 import parse from './parser';
 
-const corsUrl = 'https://cors-anywhere.herokuapp.com/';
 const differenceBy = (initialArray, newArray, key) => {
   const itemNotExist = (item, array) => !array.some((element) => element[key] === item[key]);
 
   return initialArray.filter((item) => itemNotExist(item, newArray));
 };
+
+const getUrl = (url) => {
+  const corsUrl = 'https://cors-anywhere.herokuapp.com/';
+  return corsUrl + url;
+};
+
+const updateRssItems = (state) => {
+  const promises = state.rssUrls.map(url => axios.get(getUrl(url)));
+  Promise.all(promises)
+    .then((responses) => {
+      const newRssItems = responses.map((response) => parse(response.data)).flat();
+      const rssItemsToAdd = differenceBy(newRssItems, state.rssItems, 'link');
+
+      state.rssItems = [...rssItemsToAdd, ...state.rssItems];
+
+      setTimeout(() => updateRssItems(state), 5000);
+    });
+}
 
 const app = () => {
   const state = {
@@ -31,6 +48,7 @@ const app = () => {
     debug: true,
     resources,
   }).then(() => {
+
     watch(state);
 
     const formSchema = ({ urls }) => yup.object().shape({
@@ -54,7 +72,7 @@ const app = () => {
           state.error = null;
           state.form.process = 'sending';
 
-          axios.get(corsUrl + state.form.rss)
+          axios.get(getUrl(state.form.rss))
             .then((response) => {
               const items = parse(response.data);
               state.rssItems = [...state.rssItems, ...items];
@@ -72,18 +90,8 @@ const app = () => {
         });
     });
 
-    setInterval(() => {
-      const promises = state.rssUrls.map((url) => axios.get(corsUrl + url));
-      axios.all(promises)
-        .then((responses) => {
-          const newRssItems = responses.map((response) => parse(response.data)).flat();
-          const rssItemsToAdd = differenceBy(newRssItems, state.rssItems, 'link');
-
-          state.rssItems = [...rssItemsToAdd, ...state.rssItems];
-        });
-    }, 10000);
-  });
-};
-
+    updateRssItems(state);
+  })
+}
 
 app();
