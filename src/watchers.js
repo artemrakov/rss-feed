@@ -1,4 +1,5 @@
 import { watch } from 'melanke-watchjs';
+import i18next from 'i18next';
 
 export default (state) => {
   const createFeedbackItem = (message, classes) => {
@@ -34,19 +35,20 @@ export default (state) => {
   watch(state, 'error', () => {
     const form = document.querySelector('.rss-form');
     const input = document.getElementById('rssInput');
+    const feedbackItem = document.querySelector('.feedback');
+
+    if (feedbackItem) {
+      feedbackItem.remove();
+      input.classList.remove('is-invalid');
+    }
 
     if (!state.error) {
-      input.classList.remove('is-invalid');
-      const feedbackItem = document.querySelector('.feedback');
-      feedbackItem.parentNode.removeChild(feedbackItem);
-
       return;
     }
 
     input.classList.add('is-invalid');
-
-    const feedbackItem = createFeedbackItem(state.error, ['feedback', 'text-danger']);
-    form.after(feedbackItem);
+    const feedbackItemNew = createFeedbackItem(state.error, ['feedback', 'text-danger']);
+    form.after(feedbackItemNew);
   });
 
   watch(state.form, 'process', () => {
@@ -55,20 +57,21 @@ export default (state) => {
     const submitButton = form.querySelector('input[type="submit"]');
     const input = document.getElementById('rssInput');
 
+    const feedbackItem = document.querySelector('.feedback');
+    if (feedbackItem) {
+      feedbackItem.remove();
+    }
+
     switch (process) {
       case 'filling': {
         submitButton.disabled = false;
         input.disabled = false;
-        const feedbackItem = document.querySelector('.feedback');
-        if (feedbackItem) {
-          feedbackItem.parentNode.removeChild(feedbackItem);
-        }
         break;
       }
       case 'finished': {
         submitButton.disabled = false;
         input.disabled = false;
-        form.after(createFeedbackItem('Rss has been loaded', ['feedback', 'text-success']));
+        form.after(createFeedbackItem(i18next.t('feedback.loaded'), ['feedback', 'text-success']));
         break;
       }
       case 'sending': {
@@ -79,7 +82,7 @@ export default (state) => {
       case 'failed': {
         submitButton.disabled = false;
         input.disabled = false;
-        form.after(createFeedbackItem(state.error, ['feedback', 'text-danger']));
+        form.after(createFeedbackItem(state.form.processError, ['feedback', 'text-danger']));
         break;
       }
       default: {
