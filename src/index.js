@@ -24,7 +24,9 @@ const updateRssFeed = (state, path) => {
       const rssItemsToAdd = differenceBy(newRssItems, state.rssItems, 'link');
 
       // Кирилл, я бы хотел спросить. Линтер ругается, что мы reassign param
-      // и это понятно почему он так ругается. Но мы в упражнениях делали такой же reassign. В этом случаее это нормально делать? Не понятно, когда стоит так делать , когда нет
+      // и это понятно почему он так ругается.
+      // Но мы в упражнениях делали такой же reassign.
+      // В этом случаее это нормально делать? Не понятно, когда стоит так делать , когда нет
       // eslint-disable-next-line no-param-reassign
       state.rssItems = [...rssItemsToAdd, ...state.rssItems];
 
