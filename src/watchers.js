@@ -32,7 +32,7 @@ export default (state) => {
     rssInput.value = state.form.rss;
   });
 
-  watch(state, 'error', () => {
+  watch(state.form, 'valid', () => {
     const form = document.querySelector('.rss-form');
     const input = document.getElementById('rssInput');
     const feedbackItem = document.querySelector('.feedback');
@@ -42,12 +42,12 @@ export default (state) => {
       input.classList.remove('is-invalid');
     }
 
-    if (!state.error) {
+    if (state.form.valid) {
       return;
     }
 
     input.classList.add('is-invalid');
-    const feedbackItemNew = createFeedbackItem(state.error, ['feedback', 'text-danger']);
+    const feedbackItemNew = createFeedbackItem(state.form.error, ['feedback', 'text-danger']);
     form.after(feedbackItemNew);
   });
 

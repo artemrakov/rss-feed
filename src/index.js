@@ -1,34 +1,24 @@
 import 'bootstrap/dist/css/bootstrap.min.css';
 import axios from 'axios';
+import _ from 'lodash';
 import * as yup from 'yup';
 import i18next from 'i18next';
 import watch from './watchers';
 import resources from './locales';
 import parse from './parser';
 
-const differenceBy = (initialArray, newArray, key) => {
-  const itemNotExist = (item, array) => !array.some((element) => element[key] === item[key]);
-
-  return initialArray.filter((item) => itemNotExist(item, newArray));
-};
-
 const getUrl = (path) => {
-  const corsUrl = 'https://cors-anywhere.herokuapp.com/';
-  return corsUrl + path;
+  const corsUrl = 'https://cors-anywhere.herokuapp.com';
+  return `${corsUrl}/${path}`;
 };
 
 const updateRssFeed = (state, path) => {
   axios.get(getUrl(path))
     .then((response) => {
-      const newRssItems = parse(response.data);
-      const rssItemsToAdd = differenceBy(newRssItems, state.rssItems, 'link');
+      const { items } = parse(response.data);
+      const rssItemsToAdd = _.differenceBy(items, state.rssItems, 'link');
 
-      // Кирилл, я бы хотел спросить. Линтер ругается, что мы reassign param
-      // и это понятно почему он так ругается.
-      // Но мы в упражнениях делали такой же reassign.
-      // В этом случаее это нормально делать? Не понятно, когда стоит так делать , когда нет
-      // eslint-disable-next-line no-param-reassign
-      state.rssItems = [...rssItemsToAdd, ...state.rssItems];
+      state.rssItems.unshift(...rssItemsToAdd);
 
       setTimeout(() => updateRssFeed(state, path), 5000);
     });
@@ -42,8 +32,9 @@ const app = () => {
       rss: '',
       process: 'filling',
       processError: null,
+      valid: true,
+      error: null,
     },
-    error: null,
   };
 
 
@@ -72,14 +63,14 @@ const app = () => {
       event.preventDefault();
       formSchema({ paths: state.rssPaths }).validate(state.form)
         .then(() => {
-          state.error = null;
+          state.form.valid = true;
           state.form.process = 'sending';
 
           axios.get(getUrl(state.form.rss))
             .then((response) => {
-              const items = parse(response.data);
-              state.rssItems = [...items, ...state.rssItems];
-              state.rssPaths = [...state.rssPaths, state.form.rss];
+              const { items } = parse(response.data);
+              state.rssItems.unshift(...items);
+              state.rssPaths.push(state.form.rss);
               state.form.process = 'finished';
 
               updateRssFeed(state, state.form.rss);
@@ -91,7 +82,8 @@ const app = () => {
             });
         })
         .catch((err) => {
-          state.error = err.message;
+          state.form.error = err.message;
+          state.form.valid = false;
         });
     });
   });
