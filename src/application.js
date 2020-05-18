@@ -23,10 +23,6 @@ const updateRssFeed = (state, url) => {
     });
 };
 
-const clearForm = (form) => {
-  form.rssUrl = '';
-}
-
 const formSchema = (urls) => yup.string().required().url().notOneOf(urls);
 
 const app = () => {
@@ -66,26 +62,29 @@ const app = () => {
         .then(() => {
           state.form.valid = true;
           state.form.process = 'sending';
-          const url = state.form.rssUrl;
-
-          axios.get(proxyUrl(url))
-            .then((response) => {
-              const { posts } = parse(response.data);
-              state.posts.unshift(...posts);
-              state.rssUrls.push(url);
-              state.form.process = 'finished';
-
-              updateRssFeed(state, url);
-              clearForm(state.form);
-            })
-            .catch((error) => {
-              state.form.processError = error.message;
-              state.form.process = 'failed';
-            });
+          return state.form.rssUrl;
         })
-        .catch((err) => {
-          state.form.error = err.message;
-          state.form.valid = false;
+        .then((url) => axios.get(proxyUrl(url)))
+        .then((response) => {
+          const { posts } = parse(response.data);
+          state.posts.unshift(...posts);
+          state.rssUrls.push(state.form.rssUrl);
+          state.form.process = 'finished';
+
+          updateRssFeed(state, state.form.rssUrl);
+          state.form.rssUrl = '';
+        })
+        .catch((error) => {
+          switch (error.name) {
+            case 'ValidationError':
+              state.form.valid = false;
+              state.form.error = error.message;
+              break;
+            default:
+              state.form.process = 'failed';
+              state.form.processError = error.message;
+              break;
+          }
         });
     });
   });
