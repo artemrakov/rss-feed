@@ -6,29 +6,33 @@ import watch from './watchers';
 import resources from './locales';
 import parse from './parser';
 
-const getUrl = (path) => {
+const proxyUrl = (url) => {
   const corsUrl = 'https://cors-anywhere.herokuapp.com';
-  return `${corsUrl}/${path}`;
+  return `${corsUrl}/${url}`;
 };
 
-const updateRssFeed = (state, path) => {
-  axios.get(getUrl(path))
+const updateRssFeed = (state, url) => {
+  axios.get(proxyUrl(url))
     .then((response) => {
       const { items } = parse(response.data);
       const rssItemsToAdd = _.differenceBy(items, state.rssItems, 'link');
 
       state.rssItems.unshift(...rssItemsToAdd);
 
-      setTimeout(() => updateRssFeed(state, path), 5000);
+      setTimeout(() => updateRssFeed(state, url), 5000);
     });
 };
 
-const formSchema = (paths) => yup.string().required().url().notOneOf(paths);
+const clearForm = (form) => {
+  form.rss = '';
+}
+
+const formSchema = (urls) => yup.string().required().url().notOneOf(urls);
 
 const app = () => {
   const state = {
     rssItems: [],
-    rssPaths: [],
+    rssUrls: [],
     form: {
       rss: '',
       process: 'filling',
@@ -58,21 +62,21 @@ const app = () => {
     const form = document.querySelector('.rss-form');
     form.addEventListener('submit', (event) => {
       event.preventDefault();
-      formSchema(state.rssPaths).validate(state.form.rss)
+      formSchema(state.rssUrls).validate(state.form.rss)
         .then(() => {
           state.form.valid = true;
           state.form.process = 'sending';
-          const path = state.form.rss;
+          const url = state.form.rss;
 
-          axios.get(getUrl(path))
+          axios.get(proxyUrl(url))
             .then((response) => {
               const { items } = parse(response.data);
               state.rssItems.unshift(...items);
-              state.rssPaths.push(path);
+              state.rssUrls.push(url);
               state.form.process = 'finished';
 
-              updateRssFeed(state, state.form.rss);
-              state.form.rss = '';
+              updateRssFeed(state, url);
+              clearForm(state.form);
             })
             .catch((error) => {
               state.form.processError = error.message;
