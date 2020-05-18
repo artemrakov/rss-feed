@@ -10,26 +10,26 @@ export default (state) => {
     return feedbackItem;
   };
 
-  watch(state, 'rssItems', () => {
-    const rssItemsContainer = document.querySelector('.rss-items');
-    rssItemsContainer.innerHTML = '';
-    const divNodes = state.rssItems.map((item) => {
+  watch(state, 'posts', () => {
+    const postsContainer = document.querySelector('.posts');
+    postsContainer.innerHTML = '';
+    const divNodes = state.posts.map((post) => {
       const div = document.createElement('div');
       const a = document.createElement('a');
-      a.href = item.link;
-      a.innerHTML = item.title;
+      a.href = post.link;
+      a.innerHTML = post.title;
       div.appendChild(a);
 
       return div;
     });
 
-    divNodes.forEach((div) => rssItemsContainer.appendChild(div));
+    divNodes.forEach((div) => postsContainer.appendChild(div));
   });
 
-  watch(state.form, 'rss', () => {
+  watch(state.form, 'rssUrl', () => {
     const rssInput = document.getElementById('rssInput');
 
-    rssInput.value = state.form.rss;
+    rssInput.value = state.form.rssUrl;
   });
 
   watch(state.form, 'valid', () => {

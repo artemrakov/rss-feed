@@ -14,27 +14,27 @@ const proxyUrl = (url) => {
 const updateRssFeed = (state, url) => {
   axios.get(proxyUrl(url))
     .then((response) => {
-      const { items } = parse(response.data);
-      const rssItemsToAdd = _.differenceBy(items, state.rssItems, 'link');
+      const { posts } = parse(response.data);
+      const postsToAdd = _.differenceBy(posts, state.posts, 'link');
 
-      state.rssItems.unshift(...rssItemsToAdd);
+      state.posts.unshift(...postsToAdd);
 
       setTimeout(() => updateRssFeed(state, url), 5000);
     });
 };
 
 const clearForm = (form) => {
-  form.rss = '';
+  form.rssUrl = '';
 }
 
 const formSchema = (urls) => yup.string().required().url().notOneOf(urls);
 
 const app = () => {
   const state = {
-    rssItems: [],
+    posts: [],
     rssUrls: [],
     form: {
-      rss: '',
+      rssUrl: '',
       process: 'filling',
       processError: null,
       valid: true,
@@ -56,22 +56,22 @@ const app = () => {
         state.form.process = 'filling';
       }
 
-      state.form.rss = event.target.value;
+      state.form.rssUrl = event.target.value;
     });
 
     const form = document.querySelector('.rss-form');
     form.addEventListener('submit', (event) => {
       event.preventDefault();
-      formSchema(state.rssUrls).validate(state.form.rss)
+      formSchema(state.rssUrls).validate(state.form.rssUrl)
         .then(() => {
           state.form.valid = true;
           state.form.process = 'sending';
-          const url = state.form.rss;
+          const url = state.form.rssUrl;
 
           axios.get(proxyUrl(url))
             .then((response) => {
-              const { items } = parse(response.data);
-              state.rssItems.unshift(...items);
+              const { posts } = parse(response.data);
+              state.posts.unshift(...posts);
               state.rssUrls.push(url);
               state.form.process = 'finished';
 
